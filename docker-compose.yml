@@ -1,0 +1,29 @@
+version: '3.9'
+
+volumes:
+  postgres_data: { }
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "sgucr+cq*y"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    container_name: api
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://postgres:sgucr+cq*y@postgres:5432/postgres
