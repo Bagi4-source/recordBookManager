@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union, Literal
 
 from fastapi import APIRouter, HTTPException
 from prisma.errors import ForeignKeyViolationError
@@ -24,12 +24,18 @@ class Student(StudentCreate):
     updatedAt: datetime
 
 
+class StudentFilterOrder(BaseModel):
+    by: Union[Literal['id'], Literal['name'], Literal['status'], Literal['groupId'], Literal['createdAt']]
+    direction: Union[Literal['asc'], Literal['desc']]
+
+
 class StudentFilter(BaseModel):
     skip: int = 0
     take: int = 20
     name: Optional[str] = None
     groupId: Optional[int] = None
     status: Optional[bool] = None
+    order: Optional[StudentFilterOrder]
 
 
 router = APIRouter()
@@ -38,6 +44,7 @@ router = APIRouter()
 @router.post("/filter", response_model=List[Student])
 async def get_students(filter: StudentFilter):
     where = {}
+    order = {"id": "asc"}
     for key, value in filter.dict().items():
         if key in ["skip", "take"]:
             continue
@@ -48,12 +55,18 @@ async def get_students(filter: StudentFilter):
             where[key] = {"contains": value}
             continue
 
+        if key == "order":
+            order = {}
+            order.update({value.get("by", "id"): value.get("direction", "asc")})
+            continue
+
         where[key] = value
 
     return await prisma.student.find_many(
         take=filter.take,
         skip=filter.skip,
-        where=where
+        where=where,
+        order=order
     )
 
 
