@@ -24,6 +24,11 @@ class Student(StudentCreate):
     updatedAt: datetime
 
 
+class ChangeStatus(BaseModel):
+    studentId: int
+    status: bool
+
+
 class StudentFilterOrder(BaseModel):
     by: Union[Literal['id'], Literal['name'], Literal['status'], Literal['groupId'], Literal['createdAt']]
     direction: Union[Literal['asc'], Literal['desc']]
@@ -91,6 +96,19 @@ async def read_student(student_id: int):
     if student is None:
         raise HTTPException(status_code=404, detail="Student not found")
     return student
+
+
+@router.patch("/changeStatus", response_model=ChangeStatus)
+async def change_status(data: ChangeStatus):
+    updated_student = await prisma.student.update(
+        where={"id": data.studentId},
+        data={
+            "status": data.status
+        }
+    )
+    if updated_student is None:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return updated_student
 
 
 @router.put("/{student_id}", response_model=Student)
