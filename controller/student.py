@@ -3,6 +3,7 @@ from typing import List, Optional, Union, Literal
 from fastapi import APIRouter, HTTPException
 from prisma.errors import ForeignKeyViolationError
 
+from controller.group import Group
 from db.db import prisma
 from pydantic import BaseModel
 from datetime import datetime
@@ -24,6 +25,10 @@ class Student(StudentCreate):
     updatedAt: datetime
 
 
+class StudentWithGroup(Student):
+    group: Group
+
+
 class ChangeStatus(BaseModel):
     studentId: int
     status: bool
@@ -40,11 +45,11 @@ class StudentFilter(BaseModel):
     name: Optional[str] = None
     groupId: Optional[int] = None
     status: Optional[bool] = None
-    order: Optional[StudentFilterOrder]
+    order: Optional[StudentFilterOrder] = StudentFilterOrder(by='id', direction='asc')
 
 
 class StudentList(BaseModel):
-    students: List[Student]
+    students: List[StudentWithGroup]
     count: int
     skip: int
     take: int
@@ -78,9 +83,24 @@ async def get_students(filter: StudentFilter):
         take=filter.take,
         skip=filter.skip,
         where=where,
-        order=order
+        order=order,
+        include={
+            'group': True,
+        }
     )
-    return StudentList(students=students, count=count, skip=filter.skip, take=filter.take)
+    result = []
+    for s in students:
+        group = Group(id=s.group.id, groupNumber=s.group.groupNumber, courseNumber=s.group.courseNumber)
+        result.append(StudentWithGroup(
+            id=s.id,
+            createdAt=s.createdAt,
+            updatedAt=s.updatedAt,
+            name=s.name,
+            groupId=s.groupId,
+            status=s.status,
+            group=group
+        ))
+    return StudentList(students=result, count=count, skip=filter.skip, take=filter.take)
 
 
 @router.post("/", response_model=Student)
