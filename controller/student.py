@@ -98,7 +98,7 @@ async def read_student(student_id: int):
     return student
 
 
-@router.patch("/changeStatus", response_model=ChangeStatus)
+@router.patch("/changeStatus")
 async def change_status(data: ChangeStatus):
     updated_student = await prisma.student.update(
         where={"id": data.studentId},
@@ -108,7 +108,7 @@ async def change_status(data: ChangeStatus):
     )
     if updated_student is None:
         raise HTTPException(status_code=404, detail="Student not found")
-    return updated_student
+    return
 
 
 @router.put("/{student_id}", response_model=Student)
