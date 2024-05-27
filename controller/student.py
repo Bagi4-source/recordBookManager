@@ -43,10 +43,17 @@ class StudentFilter(BaseModel):
     order: Optional[StudentFilterOrder]
 
 
+class StudentList(BaseModel):
+    students: List[Student]
+    count: int
+    skip: int
+    take: int
+
+
 router = APIRouter()
 
 
-@router.post("/filter", response_model=List[Student])
+@router.post("/filter", response_model=StudentList)
 async def get_students(filter: StudentFilter):
     where = {}
     order = {"id": "asc"}
@@ -66,13 +73,14 @@ async def get_students(filter: StudentFilter):
             continue
 
         where[key] = value
-
-    return await prisma.student.find_many(
+    count = await prisma.student.count(where=where)
+    students = await prisma.student.find_many(
         take=filter.take,
         skip=filter.skip,
         where=where,
         order=order
     )
+    return StudentList(students=students, count=count, skip=filter.skip, take=filter.take)
 
 
 @router.post("/", response_model=Student)
