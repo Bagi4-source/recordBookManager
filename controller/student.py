@@ -109,7 +109,8 @@ async def get_students(filter: StudentFilter):
 @router.post("/export")
 async def export(filter: StudentFilter):
     students_list = await get_students(filter)
-
+    if not students_list:
+        raise HTTPException(status_code=400, detail="Empty student list")
     workbook = Workbook()
     groups = {}
 
