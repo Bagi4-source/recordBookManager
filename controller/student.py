@@ -1,6 +1,9 @@
+from io import BytesIO
 from typing import List, Optional, Union, Literal
-
-from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, UploadFile, File
+from openpyxl.reader.excel import load_workbook
+from openpyxl.workbook import Workbook
 from prisma.errors import ForeignKeyViolationError
 
 from controller.group import Group
@@ -101,6 +104,80 @@ async def get_students(filter: StudentFilter):
             group=group
         ))
     return StudentList(students=result, count=count, skip=filter.skip, take=filter.take)
+
+
+@router.post("/export")
+async def export(filter: StudentFilter):
+    students_list = await get_students(filter)
+
+    workbook = Workbook()
+    groups = {}
+
+    for student in students_list.students:
+        group_name = student.group.groupNumber
+        if group_name not in groups:
+            groups[group_name] = []
+        groups[group_name].append(student)
+
+    for group_name, students in groups.items():
+        worksheet = workbook.create_sheet(title=group_name)
+        worksheet.append(["ID", "Name", "Group ID", "Status", "Created At", "Updated At"])
+        for student in students:
+            worksheet.append([
+                student.id,
+                student.name,
+                student.groupId,
+                student.status,
+                student.createdAt.strftime("%Y-%m-%d %H:%M:%S"),
+                student.updatedAt.strftime("%Y-%m-%d %H:%M:%S")
+            ])
+
+    workbook.remove(workbook["Sheet"])
+
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+
+    return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                             headers={"Content-Disposition": "attachment; filename=students_export.xlsx"})
+
+
+@router.post("/import")
+async def import_students(file: UploadFile = File(...)):
+    try:
+        workbook = load_workbook(filename=BytesIO(await file.read()))
+        async with prisma.batch_() as transaction:
+            for sheet_name in workbook.sheetnames:
+                worksheet = workbook[sheet_name]
+                for row in worksheet.iter_rows(min_row=2, values_only=True):
+                    student_id, name, group_id, status, created_at, updated_at = row
+                    student = Student(
+                        id=student_id,
+                        name=name,
+                        groupId=group_id,
+                        status=status,
+                        createdAt=created_at,
+                        updatedAt=updated_at
+                    )
+                    transaction.student.upsert(
+                        where={"id": student.id},
+                        data={
+                            "update": {
+                                "name": student.name,
+                                "groupId": student.groupId,
+                                "status": student.status,
+                            },
+                            "create": {
+                                "id": student.id,
+                                "name": student.name,
+                                "groupId": student.groupId,
+                                "status": student.status,
+                            }
+                        }
+                    )
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/", response_model=Student)
