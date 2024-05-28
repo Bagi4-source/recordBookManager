@@ -229,7 +229,7 @@ async def update_student(student_id: int, student: StudentUpdate):
         where={"id": student_id},
         data={
             "name": student.name,
-            "groupId": student.group_id,
+            "groupId": student.groupId,
             "status": student.status
         }
     )
