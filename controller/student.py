@@ -156,6 +156,8 @@ async def import_students(file: UploadFile = File(...)):
                 worksheet = workbook[sheet_name]
                 for row in worksheet.iter_rows(min_row=2, values_only=True):
                     student_id, name, group_id, status, created_at, updated_at = row
+                    if not student_id or type(student_id) is not int:
+                        student_id = -1
                     student = Student(
                         id=student_id,
                         name=name,
@@ -173,7 +175,6 @@ async def import_students(file: UploadFile = File(...)):
                                 "status": student.status,
                             },
                             "create": {
-                                "id": student.id,
                                 "name": student.name,
                                 "groupId": student.groupId,
                                 "status": student.status,
