@@ -50,7 +50,7 @@ async def update_group(group_id: int, group: GroupUpdate):
     updated_group = await prisma.group.update(
         where={"id": group_id},
         data={
-            "groupNumber": group.groupNumber,
+            "groupNumber": group.groupNumber.upper(),
             "courseNumber": group.courseNumber
         }
     )
