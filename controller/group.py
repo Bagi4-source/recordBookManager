@@ -25,7 +25,7 @@ router = APIRouter()
 async def create_group(group: GroupCreate):
     created_group = await prisma.group.create(
         data={
-            "groupNumber": group.groupNumber,
+            "groupNumber": group.groupNumber.upper(),
             "courseNumber": group.courseNumber
         }
     )

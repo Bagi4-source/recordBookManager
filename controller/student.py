@@ -148,13 +148,18 @@ async def import_students(file: UploadFile = File(...)):
         workbook = load_workbook(filename=BytesIO(await file.read()))
         async with prisma.batch_() as transaction:
             for sheet_name in workbook.sheetnames:
+                group = await prisma.group.find_unique(where={
+                    "groupNumber": sheet_name.upper()
+                })
+                if not group:
+                    continue
                 worksheet = workbook[sheet_name]
                 for row in worksheet.iter_rows(min_row=2, values_only=True):
                     student_id, name, group_id, status, created_at, updated_at = row
                     student = Student(
                         id=student_id,
                         name=name,
-                        groupId=group_id,
+                        groupId=group.id,
                         status=status,
                         createdAt=created_at,
                         updatedAt=updated_at

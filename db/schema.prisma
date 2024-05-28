@@ -11,7 +11,7 @@ model Student {
   id        Int      @id @default(autoincrement())
   name      String
   groupId   Int
-  group     Group    @relation(fields: [groupId], references: [id])
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   status    Boolean
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
