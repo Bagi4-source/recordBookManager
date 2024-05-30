@@ -34,7 +34,7 @@ async def create_group(group: GroupCreate):
 
 @router.get("/", response_model=List[Group])
 async def get_groups():
-    return await prisma.group.find_many()
+    return await prisma.group.find_many(order={"groupNumber": "asc"})
 
 
 @router.get("/{group_id}", response_model=Group)
