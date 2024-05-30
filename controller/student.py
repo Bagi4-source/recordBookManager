@@ -159,13 +159,14 @@ async def import_students(file: UploadFile = File(...)):
                     student_id, name, group_id, status, created_at, updated_at = row
                     if not student_id:
                         student_id = -1
+
                     student = Student(
                         id=student_id,
                         name=name,
                         groupId=group.id,
                         status=status,
-                        createdAt=created_at,
-                        updatedAt=updated_at
+                        createdAt=datetime.now(),
+                        updatedAt=datetime.now()
                     )
                     transaction.student.upsert(
                         where={"id": student.id},
