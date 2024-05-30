@@ -122,12 +122,11 @@ async def export(filter: StudentFilter):
 
     for group_name, students in groups.items():
         worksheet = workbook.create_sheet(title=group_name)
-        worksheet.append(["ID", "Name", "Group ID", "Status", "Created At", "Updated At"])
+        worksheet.append(["ID", "Name", "Status", "Created At", "Updated At"])
         for student in students:
             worksheet.append([
                 student.id,
                 student.name,
-                student.groupId,
                 student.status,
                 student.createdAt.strftime("%Y-%m-%d %H:%M:%S"),
                 student.updatedAt.strftime("%Y-%m-%d %H:%M:%S")
@@ -156,7 +155,7 @@ async def import_students(file: UploadFile = File(...)):
                     continue
                 worksheet = workbook[sheet_name]
                 for row in worksheet.iter_rows(min_row=2, values_only=True):
-                    student_id, name, group_id, status, created_at, updated_at = row
+                    student_id, name, status, created_at, updated_at = row
                     if not student_id:
                         student_id = -1
 
