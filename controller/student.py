@@ -47,6 +47,7 @@ class StudentFilter(BaseModel):
     take: int = 20
     name: Optional[str] = None
     groupId: Optional[int] = None
+    courseNumber: Optional[int] = None
     status: Optional[bool] = None
     order: Optional[StudentFilterOrder] = StudentFilterOrder(by='id', direction='asc')
 
@@ -64,12 +65,16 @@ router = APIRouter()
 @router.post("/filter", response_model=StudentList)
 async def get_students(filter: StudentFilter):
     where = {}
+    groupWhere = {}
     order = {"id": "asc"}
     for key, value in filter.dict().items():
         if key in ["skip", "take"]:
             continue
         if value is None:
             continue
+
+        if key == "courseNumber":
+            groupWhere[key] = value
 
         if key == "name":
             where[key] = {"contains": value}
@@ -88,7 +93,9 @@ async def get_students(filter: StudentFilter):
         where=where,
         order=order,
         include={
-            'group': True,
+            'group': {
+                'where': groupWhere
+            }
         }
     )
     result = []
