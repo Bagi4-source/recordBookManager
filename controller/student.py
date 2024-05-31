@@ -73,29 +73,31 @@ async def get_students(filter: StudentFilter):
         if value is None:
             continue
 
-        if key == "courseNumber":
-            groupWhere[key] = value
+        match key:
+            case "courseNumber":
+                groupWhere[key] = value
+            case "name":
+                where[key] = {
+                    "contains": value,
+                    "mode": "insensitive",
+                }
+            case "order":
+                order = {}
+                order.update({value.get("by", "id"): value.get("direction", "asc")})
+            case _:
+                where[key] = value
 
-        if key == "name":
-            where[key] = {"contains": value}
-            continue
-
-        if key == "order":
-            order = {}
-            order.update({value.get("by", "id"): value.get("direction", "asc")})
-            continue
-
-        where[key] = value
     count = await prisma.student.count(where=where)
     students = await prisma.student.find_many(
         take=filter.take,
         skip=filter.skip,
-        where=where,
+        where={
+            **where,
+            'group': groupWhere
+        },
         order=order,
         include={
-            'group': {
-                'where': groupWhere
-            }
+            'group': True
         }
     )
     result = []
