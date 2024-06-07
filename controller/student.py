@@ -63,11 +63,11 @@ router = APIRouter()
 
 
 @router.post("/filter", response_model=StudentList)
-async def get_students(filter: StudentFilter):
+async def get_students(student_filter: StudentFilter):
     where = {}
     groupWhere = {}
     order = {"id": "asc"}
-    for key, value in filter.dict().items():
+    for key, value in student_filter.dict().items():
         if key in ["skip", "take"]:
             continue
         if value is None:
@@ -89,8 +89,8 @@ async def get_students(filter: StudentFilter):
 
     count = await prisma.student.count(where=where)
     students = await prisma.student.find_many(
-        take=filter.take,
-        skip=filter.skip,
+        take=student_filter.take,
+        skip=student_filter.skip,
         where={
             **where,
             'group': groupWhere
@@ -112,12 +112,12 @@ async def get_students(filter: StudentFilter):
             status=s.status,
             group=group
         ))
-    return StudentList(students=result, count=count, skip=filter.skip, take=filter.take)
+    return StudentList(students=result, count=count, skip=student_filter.skip, take=student_filter.take)
 
 
 @router.post("/export")
-async def export(filter: StudentFilter):
-    students_list = await get_students(filter)
+async def export(student_filter: StudentFilter):
+    students_list = await get_students(student_filter)
     if not students_list.students:
         raise HTTPException(status_code=400, detail="Empty student list")
     workbook = Workbook()
@@ -207,7 +207,7 @@ async def create_student(student: StudentCreate):
             }
         )
         return created_student
-    except ForeignKeyViolationError as e:
+    except ForeignKeyViolationError:
         raise HTTPException(status_code=404, detail="Group not found")
 
 
@@ -248,8 +248,19 @@ async def update_student(student_id: int, student: StudentUpdate):
 
 
 @router.delete("/{student_id}", response_model=Student)
-async def delete_student(student_id: int):
+async def delete_student_by_id(student_id: int):
     deleted_student = await prisma.student.delete(where={"id": student_id})
     if deleted_student is None:
         raise HTTPException(status_code=404, detail="Student not found")
     return deleted_student
+
+
+@router.delete("/", response_model=Student)
+async def delete_students(student_filter: StudentFilter):
+    students_list = await get_students(student_filter)
+    if not students_list.students:
+        raise HTTPException(status_code=400, detail="Empty student list")
+    async with prisma.batch_() as transaction:
+        for student in students_list.students:
+            transaction.student.delete(where={"id": student.id})
+    return {"status": "success"}
